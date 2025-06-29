@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محیط طراحی بازگشتی سه‌بعدی</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #e6e6e6;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: 70px 1fr 220px;
+            grid-template-areas: 
+                "header header"
+                "sidebar main"
+                "editor editor";
+            height: 100vh;
+        }
+        
+        header {
+            grid-area: header;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo i {
+            color: #4cc9f0;
+            font-size: 24px;
+        }
+        
+        .logo h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #4cc9f0, #4361ee);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+        
+        .controls {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            background: linear-gradient(90deg, #4361ee, #4cc9f0);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 201, 240, 0.4);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #4cc9f0;
+            color: #4cc9f0;
+        }
+        
+        .btn-outline:hover {
+            background: rgba(76, 201, 240, 0.1);
+        }
+        
+        aside {
+            grid-area: sidebar;
+            background: rgba(10, 15, 30, 0.7);
+            backdrop-filter: blur(5px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .panel {
+            background: rgba(20, 25, 45, 0.6);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(76, 201, 240, 0.1);
+        }
+        
+        .panel-title {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            color: #4cc9f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #a0a0c0;
+        }
+        
+        select, input[type="range"], input[type="color"], input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(30, 35, 60, 0.7);
+            border: 1px solid rgba(76, 201, 240, 0.3);
+            border-radius: 8px;
+            color: white;
+            outline: none;
+        }
+        
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #4361ee, #4cc9f0);
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .shape-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .shape-item {
+            background: rgba(40, 45, 70, 0.6);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        
+        .shape-item:hover {
+            border-color: #4cc9f0;
+            transform: translateY(-3px);
+            background: rgba(60, 65, 100, 0.6);
+        }
+        
+        .shape-item i {
+            font-size: 24px;
+            color: #4cc9f0;
+            margin-bottom: 8px;
+        }
+        
+        .shape-item.active {
+            border-color: #4cc9f0;
+            background: rgba(76, 201, 240, 0.2);
+        }
+        
+        main {
+            grid-area: main;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .recursive-editor {
+            grid-area: editor;
+            background: rgba(15, 20, 40, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .editor-title {
+            font-size: 1.2rem;
+            color: #4cc9f0;
+        }
+        
+        .editor-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .editor-body {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        
+        .rule-definition {
+            flex: 1;
+            background: rgba(30, 35, 60, 0.6);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .rule-params {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .param-group {
+            background: rgba(40, 45, 70, 0.6);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .param-title {
+            color: #4cc9f0;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+        
+        .param-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .rule-preview {
+            width: 300px;
+            background: rgba(30, 35, 60, 0.6);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .preview-title {
+            color: #4cc9f0;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .preview-container {
+            flex: 1;
+            background: rgba(10, 15, 30, 0.5);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .preview-shape {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-30deg) rotateY(30deg);
+        }
+        
+        .preview-cube {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+        
+        .preview-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(76, 201, 240, 0.3);
+            border: 1px solid rgba(76, 201, 240, 0.6);
+        }
+        
+        .preview-face:nth-child(1) { transform: translateZ(40px); }
+        .preview-face:nth-child(2) { transform: rotateY(180deg) translateZ(40px); }
+        .preview-face:nth-child(3) { transform: rotateY(90deg) translateZ(40px); }
+        .preview-face:nth-child(4) { transform: rotateY(-90deg) translateZ(40px); }
+        .preview-face:nth-child(5) { transform: rotateX(90deg) translateZ(40px); }
+        .preview-face:nth-child(6) { transform: rotateX(-90deg) translateZ(40px); }
+        
+        .info-box {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 300px;
+        }
+        
+        .info-box h3 {
+            color: #4cc9f0;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .info-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .help-text {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 300px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .help-text h3 {
+            color: #4cc9f0;
+            margin-bottom: 8px;
+        }
+        
+        .help-text ul {
+            padding-left: 20px;
+        }
+        
+        .help-text li {
+            margin-bottom: 6px;
+        }
+        
+        @media (max-width: 1100px) {
+            .container {
+                grid-template-rows: 70px 1fr 300px;
+            }
+            
+            .editor-body {
+                flex-direction: column;
+            }
+            
+            .rule-preview {
+                width: 100%;
+                height: 150px;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main"
+                    "editor";
+            }
+            
+            aside {
+                position: absolute;
+                top: 70px;
+                left: -300px;
+                width: 300px;
+                height: calc(100vh - 70px - 220px);
+                z-index: 100;
+                transition: transform 0.3s ease;
+            }
+            
+            aside.active {
+                transform: translateX(300px);
+            }
+            
+            .menu-toggle {
+                display: block !important;
+            }
+        }
+        
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: #4cc9f0;
+            font-size: 24px;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-infinity"></i>
+                <h1>طراحی بازگشتی سه‌بعدی</h1>
+            </div>
+            <div class="controls">
+                <button class="btn" id="export-btn">
+                    <i class="fas fa-download"></i> ذخیره طرح
+                </button>
+                <button class="btn btn-outline" id="random-btn">
+                    <i class="fas fa-random"></i> طرح تصادفی
+                </button>
+                <button class="menu-toggle" id="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </header>
+        
+        <aside id="sidebar">
+            <div class="panel">
+                <h3 class="panel-title"><i class="fas fa-shapes"></i> شکل پایه</h3>
+                <div class="form-group">
+                    <label>انتخاب شکل پایه برای بازگشت</label>
+                    <div class="shape-list">
+                        <div class="shape-item active" data-shape="cube">
+                            <i class="fas fa-cube"></i>
+                            <div>مکعب</div>
+                        </div>
+                        <div class="shape-item" data-shape="sphere">
+                            <i class="fas fa-circle"></i>
+                            <div>کره</div>
+                        </div>
+                        <div class="shape-item" data-shape="cylinder">
+                            <i class="fas fa-certificate"></i>
+                            <div>استوانه</div>
+                        </div>
+                        <div class="shape-item" data-shape="pyramid">
+                            <i class="fas fa-gem"></i>
+                            <div>هرم</div>
+                        </div>
+                        <div class="shape-item" data-shape="torus">
+                            <i class="fas fa-ring"></i>
+                            <div>حلقه</div>
+                        </div>
+                        <div class="shape-item" data-shape="cone">
+                            <i class="fas fa-ice-cream"></i>
+                            <div>مخروط</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3 class="panel-title"><i class="fas fa-sliders-h"></i> پارامترهای بازگشت</h3>
+                <div class="form-group">
+                    <label for="recursion-depth">عمق بازگشت: <span id="depth-value">3</span></label>
+                    <input type="range" id="recursion-depth" min="1" max="6" value="3">
+                </div>
+                
+                <div class="form-group">
+                    <label for="recursion-count">تعداد نمونه‌ها: <span id="count-value">6</span></label>
+                    <input type="range" id="recursion-count" min="1" max="12" value="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="scale-factor">ضریب مقیاس: <span id="scale-value">0.6</span></label>
+                    <input type="range" id="scale-factor" min="0.1" max="0.9" step="0.05" value="0.6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="color">رنگ پایه</label>
+                    <div style="display: flex; align-items: center;">
+                        <input type="color" id="color" value="#4cc9f0">
+                        <span class="color-preview" id="color-preview" style="background-color: #4cc9f0;"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3 class="panel-title"><i class="fas fa-project-diagram"></i> ساختار بازگشتی</h3>
+                <div class="form-group">
+                    <label for="recursion-type">الگوی بازگشت</label>
+                    <select id="recursion-type">
+                        <option value="radial">شعاعی (Radial)</option>
+                        <option value="linear">خطی (Linear)</option>
+                        <option value="spiral">مارپیچ (Spiral)</option>
+                        <option value="fractal">فرکتالی (Fractal)</option>
+                        <option value="tree">درختی (Tree)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="rotation-angle">زاویه چرخش: <span id="angle-value">45</span>°</label>
+                    <input type="range" id="rotation-angle" min="0" max="180" value="45">
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3 class="panel-title"><i class="fas fa-save"></i> طرح‌های ذخیره شده</h3>
+                <div class="form-group">
+                    <select id="saved-designs">
+                        <option value="">یک طرح را انتخاب کنید</option>
+                        <option value="crystal">ساختار کریستالی</option>
+                        <option value="fractal-tree">درخت فرکتالی</option>
+                        <option value="spiral-tower">برج مارپیچ</option>
+                        <option value="geometric">ساختار هندسی</option>
+                    </select>
+                </div>
+                <button class="btn" id="load-btn" style="width: 100%; margin-top: 10px;">
+                    <i class="fas fa-upload"></i> بارگذاری طرح
+                </button>
+            </div>
+        </aside>
+        
+        <main>
+            <div id="canvas-container"></div>
+            
+            <div class="info-box">
+                <h3><i class="fas fa-info-circle"></i> اطلاعات طراحی</h3>
+                <div class="info-content">
+                    <p>عمق فعلی: <strong>3</strong></p>
+                    <p>تکلاشی‌ها: <strong>126</strong></p>
+                    <p>پیچیدگی: <strong>متوسط</strong></p>
+                </div>
+            </div>
+            
+            <div class="help-text">
+                <h3><i class="fas fa-lightbulb"></i> راهنمای استفاده</h3>
+                <ul>
+                    <li>برای چرخش: کلیک چپ و درگ</li>
+                    <li>برای جابجایی: کلیک راست و درگ</li>
+                    <li>برای زوم: اسکرول ماوس</li>
+                    <li>پارامترها را در پنل سمت چپ تغییر دهید</li>
+                    <li>ساختار بازگشتی در پنل پایین قابل ویرایش است</li>
+                </ul>
+            </div>
+        </main>
+        
+        <div class="recursive-editor">
+            <div class="editor-header">
+                <div class="editor-title">
+                    <i class="fas fa-code"></i> ویرایشگر قوانین بازگشتی
+                </div>
+                <div class="editor-controls">
+                    <button class="btn">
+                        <i class="fas fa-play"></i> اجرای بازگشت
+                    </button>
+                    <button class="btn btn-outline">
+                        <i class="fas fa-redo"></i> بازنشانی
+                    </button>
+                </div>
+            </div>
+            <div class="editor-body">
+                <div class="rule-definition">
+                    <h3 class="preview-title">تعریف قانون بازگشتی</h3>
+                    <div class="rule-params">
+                        <div class="param-group">
+                            <div class="param-title">انتقال</div>
+                            <div class="param-controls">
+                                <label>X: <input type="number" value="1.2" step="0.1"></label>
+                                <label>Y: <input type="number" value="0.8" step="0.1"></label>
+                                <label>Z: <input type="number" value="0.0" step="0.1"></label>
+                            </div>
+                        </div>
+                        
+                        <div class="param-group">
+                            <div class="param-title">چرخش</div>
+                            <div class="param-controls">
+                                <label>X: <input type="number" value="0" step="5">°</label>
+                                <label>Y: <input type="number" value="45" step="5">°</label>
+                                <label>Z: <input type="number" value="0" step="5">°</label>
+                            </div>
+                        </div>
+                        
+                        <div class="param-group">
+                            <div class="param-title">مقیاس</div>
+                            <div class="param-controls">
+                                <label>X: <input type="number" value="0.7" step="0.05"></label>
+                                <label>Y: <input type="number" value="0.7" step="0.05"></label>
+                                <label>Z: <input type="number" value="0.7" step="0.05"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rule-preview">
+                    <h3 class="preview-title">پیش‌نمایش قانون</h3>
+                    <div class="preview-container">
+                        <div class="preview-shape">
+                            <div class="preview-cube">
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                            </div>
+                            <div class="preview-cube" style="transform: translateX(40px) translateY(30px) scale(0.7) rotateY(45deg);">
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                                <div class="preview-face"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // عناصر DOM
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menu-toggle');
+        const depthSlider = document.getElementById('recursion-depth');
+        const depthValue = document.getElementById('depth-value');
+        const countSlider = document.getElementById('recursion-count');
+        const countValue = document.getElementById('count-value');
+        const scaleSlider = document.getElementById('scale-factor');
+        const scaleValue = document.getElementById('scale-value');
+        const angleSlider = document.getElementById('rotation-angle');
+        const angleValue = document.getElementById('angle-value');
+        const colorPicker = document.getElementById('color');
+        const colorPreview = document.getElementById('color-preview');
+        const shapeItems = document.querySelectorAll('.shape-item');
+        const recursionType = document.getElementById('recursion-type');
+        const randomBtn = document.getElementById('random-btn');
+        
+        // تنظیمات Three.js
+        let scene, camera, renderer, controls;
+        let recursiveGroup = new THREE.Group();
+        let baseShape = 'cube';
+        let recursionDepth = 3;
+        let recursionCount = 6;
+        let scaleFactor = 0.6;
+        let rotationAngle = 45;
+        let baseColor = new THREE.Color(0x4cc9f0);
+        let recursionPattern = 'radial';
+        
+        // مقداردهی اولیه
+        function init() {
+            // ایجاد صحنه
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0c0c1a);
+            scene.fog = new THREE.Fog(0x0c0c1a, 15, 30);
+            
+            // ایجاد دوربین
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 25;
+            camera.position.y = 10;
+            
+            // ایجاد رندرر
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // ایجاد کنترل‌های دوربین
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // اضافه کردن نورها
+            setupLights();
+            
+            // ایجاد شکل بازگشتی اولیه
+            createRecursiveStructure();
+            
+            // رویدادهای UI
+            setupEventListeners();
+            
+            // انیمیشن
+            animate();
+        }
+        
+        // ایجاد نورها
+        function setupLights() {
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            const backLight = new THREE.DirectionalLight(0x4cc9f0, 0.5);
+            backLight.position.set(-5, -5, -5);
+            scene.add(backLight);
+            
+            const topLight = new THREE.PointLight(0x4cc9f0, 0.5);
+            topLight.position.set(0, 10, 0);
+            scene.add(topLight);
+        }
+        
+        // ایجاد ساختار بازگشتی
+        function createRecursiveStructure() {
+            // حذف ساختار قبلی
+            while (recursiveGroup.children.length > 0) {
+                recursiveGroup.remove(recursiveGroup.children[0]);
+            }
+            
+            // ایجاد شکل پایه
+            createBaseShape(0, 0, 0, 5, recursionDepth);
+            
+            // اضافه کردن به صحنه
+            scene.add(recursiveGroup);
+        }
+        
+        // ایجاد شکل پایه به صورت بازگشتی
+        function createBaseShape(x, y, z, size, depth) {
+            if (depth === 0) return;
+            
+            let geometry, material;
+            
+            // انتخاب شکل بر اساس تنظیمات
+            switch (baseShape) {
+                case 'sphere':
+                    geometry = new THREE.SphereGeometry(size, 32, 32);
+                    break;
+                case 'cylinder':
+                    geometry = new THREE.CylinderGeometry(size/2, size/2, size, 32);
+                    break;
+                case 'pyramid':
+                    geometry = new THREE.ConeGeometry(size, size, 4);
+                    break;
+                case 'torus':
+                    geometry = new THREE.TorusGeometry(size, size/3, 16, 32);
+                    break;
+                case 'cone':
+                    geometry = new THREE.ConeGeometry(size/2, size, 32);
+                    break;
+                default: // cube
+                    geometry = new THREE.BoxGeometry(size, size, size);
+            }
+            
+            // ایجاد متریال با رنگ متغیر بر اساس عمق
+            const color = new THREE.Color(baseColor);
+            color.multiplyScalar(1 - (recursionDepth - depth) * 0.15);
+            
+            material = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color.clone().multiplyScalar(0.1),
+                specular: new THREE.Color(0xffffff),
+                shininess: 50,
+                flatShading: false,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const shape = new THREE.Mesh(geometry, material);
+            shape.position.set(x, y, z);
+            shape.castShadow = true;
+            shape.receiveShadow = true;
+            recursiveGroup.add(shape);
+            
+            // ایجاد نمونه‌های بازگشتی
+            if (depth > 1) {
+                const newSize = size * scaleFactor;
+                const angleStep = (Math.PI * 2) / recursionCount;
+                
+                for (let i = 0; i < recursionCount; i++) {
+                    const angle = angleStep * i + (rotationAngle * Math.PI / 180);
+                    let nx = 0, ny = 0, nz = 0;
+                    
+                    switch (recursionPattern) {
+                        case 'linear':
+                            nx = x + Math.cos(angle) * size * 1.2;
+                            ny = y;
+                            nz = z + Math.sin(angle) * size * 1.2;
+                            break;
+                        case 'spiral':
+                            nx = x + Math.cos(angle) * size * (1 + (recursionDepth - depth) * 0.3);
+                            ny = y + size * 0.3;
+                            nz = z + Math.sin(angle) * size * (1 + (recursionDepth - depth) * 0.3);
+                            break;
+                        case 'fractal':
+                            nx = x + (Math.cos(angle) * size * 1.5);
+                            ny = y + (Math.sin(angle) * size * 0.5);
+                            nz = z + (Math.cos(angle * 2) * size * 0.5);
+                            break;
+                        case 'tree':
+                            nx = x + Math.cos(angle) * size * 0.8;
+                            ny = y - size * 1.2;
+                            nz = z + Math.sin(angle) * size * 0.8;
+                            break;
+                        default: // radial
+                            nx = x + Math.cos(angle) * size * 1.5;
+                            ny = y;
+                            nz = z + Math.sin(angle) * size * 1.5;
+                    }
+                    
+                    createBaseShape(nx, ny, nz, newSize, depth - 1);
+                }
+            }
+        }
+        
+        // تنظیم رویدادها
+        function setupEventListeners() {
+            // رویدادهای UI
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+            
+            // تغییر شکل پایه
+            shapeItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    shapeItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    baseShape = item.dataset.shape;
+                    createRecursiveStructure();
+                });
+            });
+            
+            // تغییر عمق بازگشت
+            depthSlider.addEventListener('input', () => {
+                recursionDepth = parseInt(depthSlider.value);
+                depthValue.textContent = recursionDepth;
+                createRecursiveStructure();
+            });
+            
+            // تغییر تعداد نمونه‌ها
+            countSlider.addEventListener('input', () => {
+                recursionCount = parseInt(countSlider.value);
+                countValue.textContent = recursionCount;
+                createRecursiveStructure();
+            });
+            
+            // تغییر ضریب مقیاس
+            scaleSlider.addEventListener('input', () => {
+                scaleFactor = parseFloat(scaleSlider.value);
+                scaleValue.textContent = scaleFactor.toFixed(2);
+                createRecursiveStructure();
+            });
+            
+            // تغییر زاویه چرخش
+            angleSlider.addEventListener('input', () => {
+                rotationAngle = parseInt(angleSlider.value);
+                angleValue.textContent = rotationAngle;
+                createRecursiveStructure();
+            });
+            
+            // تغییر رنگ
+            colorPicker.addEventListener('input', () => {
+                baseColor = new THREE.Color(colorPicker.value);
+                colorPreview.style.backgroundColor = colorPicker.value;
+                createRecursiveStructure();
+            });
+            
+            // تغییر الگوی بازگشت
+            recursionType.addEventListener('change', () => {
+                recursionPattern = recursionType.value;
+                createRecursiveStructure();
+            });
+            
+            // ایجاد طرح تصادفی
+            randomBtn.addEventListener('click', () => {
+                // انتخاب تصادفی شکل
+                const shapes = ['cube', 'sphere', 'cylinder', 'pyramid', 'torus', 'cone'];
+                baseShape = shapes[Math.floor(Math.random() * shapes.length)];
+                shapeItems.forEach(i => i.classList.remove('active'));
+                document.querySelector(`.shape-item[data-shape="${baseShape}"]`).classList.add('active');
+                
+                // تنظیم پارامترهای تصادفی
+                recursionDepth = Math.floor(Math.random() * 4) + 2;
+                depthSlider.value = recursionDepth;
+                depthValue.textContent = recursionDepth;
+                
+                recursionCount = Math.floor(Math.random() * 8) + 4;
+                countSlider.value = recursionCount;
+                countValue.textContent = recursionCount;
+                
+                scaleFactor = (Math.random() * 0.5 + 0.3).toFixed(2);
+                scaleSlider.value = scaleFactor;
+                scaleValue.textContent = scaleFactor;
+                
+                rotationAngle = Math.floor(Math.random() * 180);
+                angleSlider.value = rotationAngle;
+                angleValue.textContent = rotationAngle;
+                
+                // انتخاب تصادفی الگو
+                const patterns = ['radial', 'linear', 'spiral', 'fractal', 'tree'];
+                recursionPattern = patterns[Math.floor(Math.random() * patterns.length)];
+                recursionType.value = recursionPattern;
+                
+                // رنگ تصادفی
+                const randomColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+                colorPicker.value = '#' + randomColor.getHexString();
+                colorPreview.style.backgroundColor = colorPicker.value;
+                baseColor = randomColor;
+                
+                // ایجاد ساختار جدید
+                createRecursiveStructure();
+            });
+            
+            // رویداد تغییر اندازه پنجره
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        // انیمیشن
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // چرخش ملایم ساختار
+            recursiveGroup.rotation.y += 0.001;
+            recursiveGroup.rotation.x += 0.0005;
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // شروع برنامه
+        init();
+    </script>
+</body>
+</html>
